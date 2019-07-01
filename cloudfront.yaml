@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  DomainName:
+    Type: String
+  OriginS3Name:
+    Type: String
+  OriginS3Url:
+    Type: String
+  OriginId:
+    Type: String
+
+Resources:
+  Distribution:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Ref DomainName
+          - !Sub '*.${DomainName}'
+        Origins:
