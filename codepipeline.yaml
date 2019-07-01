@@ -1,12 +1,12 @@
 Parameters:
+  DistributionId:
+    Type: String
+  WebsiteBucket:
+    Type: String
   BranchName:
-    Description: GitHub branch name
     Type: String
-    Default: master
   RepositoryName:
-    Description: GitHub repository name
     Type: String
-    Default: test
   GitHubOwner:
     Type: String
   GitHubSecret:
@@ -15,14 +15,7 @@ Parameters:
   GitHubOAuthToken:
     Type: String
     NoEcho: true
-  ApplicationName:
-    Description: CodeDeploy application name
-    Type: String
-    Default: DemoApplication
-  BetaFleet:
-    Description: Fleet configured in CodeDeploy
-    Type: String
-    Default: DemoFleet
+
 Resources:
   CodePipelineArtifactStoreBucket:
     Type: 'AWS::S3::Bucket'
@@ -37,9 +30,9 @@ Resources:
             Effect: Deny
             Principal: '*'
             Action: 's3:PutObject'
-            Resource: !Join 
+            Resource: !Join
               - ''
-              - - !GetAtt 
+              - - !GetAtt
                   - CodePipelineArtifactStoreBucket
                   - Arn
                 - /*
@@ -50,9 +43,9 @@ Resources:
             Effect: Deny
             Principal: '*'
             Action: 's3:*'
-            Resource: !Join 
+            Resource: !Join
               - ''
-              - - !GetAtt 
+              - - !GetAtt
                   - CodePipelineArtifactStoreBucket
                   - Arn
                 - /*
@@ -67,21 +60,89 @@ Resources:
         SecretToken: !Ref GitHubSecret
       Filters:
         - JsonPath: $.ref
-          MatchEquals: 'refs/heads/{Branch}'
-      TargetPipeline: !Ref AppPipeline
+          MatchEquals: 'refs/heads/{Branch)'
+      TargetPipeline: !Ref CodePipeline
       TargetAction: SourceAction
-      Name: AppPipelineWebhook
-      TargetPipelineVersion: !GetAtt 
-        - AppPipeline
-        - Version
+      TargetPipelineVersion: !GetAtt CodePipeline.Version
       RegisterWithThirdParty: true
-  AppPipeline:
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: ['sts:AssumeRole']
+            Effect: Allow
+            Principal:
+              Service: [codebuild.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:*'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:GetBucketAcl'
+                  - 's3:GetBucketLocation'
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - 's3:*'
+                Resource: "*"
+  CodeBuildProject:
+    Type: 'AWS::CodeBuild::Project'
+    Properties:
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: |
+          version: 0.2
+
+          phases:
+            install:
+              runtime-versions:
+                nodejs: 10
+            pre_build:
+              commands:
+                - npm install
+            build:
+              commands:
+                - npm run build
+            post_build:
+              commands:
+                - echo deploy to $ENV_BUCKET
+                - aws s3 sync ./build s3://$ENV_BUCKET --delete
+                - echo invalidate CDN $ENV_DISTRIBUTION_ID
+#                - aws cloudfront create-invalidation --distribution-id $ENV_DISTRIBUTION_ID --paths "/*"
+#
+#          artifacts:
+#            files:
+#              - '**/*'
+#            base-directory: build
+#      BadgeEnabled: true
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:2.0
+        EnvironmentVariables:
+          - Name: ENV_BUCKET
+            Value: !Ref WebsiteBucket
+          - Name: ENV_DISTRIBUTION_ID
+            Value: !Ref DistributionId
+  CodePipeline:
     Type: 'AWS::CodePipeline::Pipeline'
     Properties:
-      Name: github-events-pipeline
-      RoleArn: !GetAtt 
-        - CodePipelineServiceRole
-        - Arn
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
       Stages:
         - Name: Source
           Actions:
@@ -100,19 +161,20 @@ Resources:
                 OAuthToken: !Ref GitHubOAuthToken
                 PollForSourceChanges: false
               RunOrder: 1
-        - Name: Beta
+        - Name: Build
           Actions:
-            - Name: BetaAction
+            - Name: BuildAction
               InputArtifacts:
                 - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
               ActionTypeId:
-                Category: Deploy
+                Category: Build
                 Owner: AWS
                 Version: 1
-                Provider: CodeDeploy
+                Provider: CodeBuild
               Configuration:
-                ApplicationName: !Ref ApplicationName
-                DeploymentGroupName: !Ref BetaFleet
+                ProjectName: !Ref CodeBuildProject
               RunOrder: 1
       ArtifactStore:
         Type: S3
@@ -136,54 +198,59 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'codecommit:CancelUploadArchive'
-                  - 'codecommit:GetBranch'
-                  - 'codecommit:GetCommit'
-                  - 'codecommit:GetUploadArchiveStatus'
-                  - 'codecommit:UploadArchive'
+                  - 's3:*'
+                  - 'cloudwatch:*'
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'codedeploy:CreateDeployment'
-                  - 'codedeploy:GetApplicationRevision'
-                  - 'codedeploy:GetDeployment'
-                  - 'codedeploy:GetDeploymentConfig'
-                  - 'codedeploy:RegisterApplicationRevision'
-                Resource: '*'
+#              - Effect: Allow
+#                Action:
+#                  - 'codecommit:CancelUploadArchive'
+#                  - 'codecommit:GetBranch'
+#                  - 'codecommit:GetCommit'
+#                  - 'codecommit:GetUploadArchiveStatus'
+#                  - 'codecommit:UploadArchive'
+#                Resource: '*'
+#              - Effect: Allow
+#                Action:
+#                  - 'codedeploy:CreateDeployment'
+#                  - 'codedeploy:GetApplicationRevision'
+#                  - 'codedeploy:GetDeployment'
+#                  - 'codedeploy:GetDeploymentConfig'
+#                  - 'codedeploy:RegisterApplicationRevision'
+#                Resource: '*'
               - Effect: Allow
                 Action:
                   - 'codebuild:BatchGetBuilds'
                   - 'codebuild:StartBuild'
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'devicefarm:ListProjects'
-                  - 'devicefarm:ListDevicePools'
-                  - 'devicefarm:GetRun'
-                  - 'devicefarm:GetUpload'
-                  - 'devicefarm:CreateUpload'
-                  - 'devicefarm:ScheduleRun'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'lambda:InvokeFunction'
-                  - 'lambda:ListFunctions'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'iam:PassRole'
-                Resource: '*'
-              - Effect: Allow
-                Action:
-                  - 'elasticbeanstalk:*'
-                  - 'ec2:*'
-                  - 'elasticloadbalancing:*'
-                  - 'autoscaling:*'
-                  - 'cloudwatch:*'
-                  - 's3:*'
-                  - 'sns:*'
-                  - 'cloudformation:*'
-                  - 'rds:*'
-                  - 'sqs:*'
-                  - 'ecs:*'
-                Resource: '*'
+#              - Effect: Allow
+#                Action:
+#                  - 'devicefarm:ListProjects'
+#                  - 'devicefarm:ListDevicePools'
+#                  - 'devicefarm:GetRun'
+#                  - 'devicefarm:GetUpload'
+#                  - 'devicefarm:CreateUpload'
+#                  - 'devicefarm:ScheduleRun'
+#                Resource: '*'
+#              - Effect: Allow
+#                Action:
+#                  - 'lambda:InvokeFunction'
+#                  - 'lambda:ListFunctions'
+#                Resource: '*'
+#              - Effect: Allow
+#                Action:
+#                  - 'iam:PassRole'
+#                Resource: '*'
+#              - Effect: Allow
+#                Action:
+#                  - 'elasticbeanstalk:*'
+#                  - 'ec2:*'
+#                  - 'elasticloadbalancing:*'
+#                  - 'autoscaling:*'
+#                  - 'cloudwatch:*'
+#                  - 's3:*'
+#                  - 'sns:*'
+#                  - 'cloudformation:*'
+#                  - 'rds:*'
+#                  - 'sqs:*'
+#                  - 'ecs:*'
+#                Resource: '*'

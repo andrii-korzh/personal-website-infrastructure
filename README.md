@@ -1,2 +1,2 @@
-# AWS code pipeline template
-AWS code pipeline template
+# Website infrastructure
+Website infrastructure

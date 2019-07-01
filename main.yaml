@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  StackTimeout:
+    Type: String
+    Default: 5
+  DistributionId:
+    Type: String
+  DomainName:
+    Type: String
+  BranchName:
+    Type: String
+  RepositoryName:
+    Type: String
+  GitHubOwner:
+    Type: String
+  GitHubSecret:
+    Type: String
+    NoEcho: true
+  GitHubOAuthToken:
+    Type: String
+    NoEcho: true
+Resources:
+  Route53Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+      TemplateURL: ./route53.yaml
+      TimeoutInMinutes: !Ref StackTimeout
+  CodePipelineStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        DistributionId: !Ref DistributionId
+        WebsiteBucket: !Ref DomainName
+        BranchName: !Ref BranchName
+        RepositoryName: !Ref RepositoryName
+        GitHubOwner: !Ref GitHubOwner
+        GitHubSecret: !Ref GitHubSecret
+        GitHubOAuthToken: !Ref GitHubOAuthToken
+      TemplateURL: ./codepipeline.yaml
