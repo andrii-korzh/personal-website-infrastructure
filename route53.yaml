@@ -8,15 +8,15 @@ Parameters:
     Default: Z2FDTNDATAQYW2 #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-route53.html#w2ab1c17c23c81c11
 
 Resources:
-#  CloudFrontRecord:
-#    Type: AWS::Route53::RecordSet
-#    Properties:
-#      HostedZoneName: !Sub '${DomainName}.'
-#      Name: !Ref DomainName
-#      Type: A
-#      AliasTarget:
-#        DNSName: CloudFrontUrl
-#        HostedZoneId: !Ref HostedZoneId
+  CloudFrontRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${DomainName}.'
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !Ref CloudFrontUrl
+        HostedZoneId: !Ref HostedZoneId
   CloudFrontRecordWWW:
     Type: AWS::Route53::RecordSet
     Properties:
