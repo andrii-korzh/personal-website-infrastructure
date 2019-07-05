@@ -48,7 +48,7 @@ Resources:
         Enabled: true
         Origins:
           - Id: !Ref OriginId
-            DomainName: !Sub 'www.${ApexDomainName}.s3.amazonaws.com'
+            DomainName: !Sub  '${OriginBucket}.s3.amazonaws.com'
             S3OriginConfig:
               OriginAccessIdentity: !Join
                 - ''
