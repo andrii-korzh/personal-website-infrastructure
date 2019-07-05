@@ -1,7 +1,7 @@
 Parameters:
   DistributionId:
     Type: String
-  WebsiteBucket:
+  DeployBucket:
     Type: String
   BranchName:
     Type: String
@@ -19,6 +19,7 @@ Parameters:
 Resources:
   CodePipelineArtifactStoreBucket:
     Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
   CodePipelineArtifactStoreBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -136,7 +137,7 @@ Resources:
         Image: aws/codebuild/standard:2.0
         EnvironmentVariables:
           - Name: ENV_BUCKET
-            Value: !Ref WebsiteBucket
+            Value: !Ref DeployBucket
           - Name: ENV_DISTRIBUTION_ID
             Value: !Ref DistributionId
   CodePipeline:
@@ -200,6 +201,7 @@ Resources:
                 Action:
                   - 's3:*'
                   - 'cloudwatch:*'
+#                  - 'cloudfront:CreateInvalidation'
                 Resource: '*'
 #              - Effect: Allow
 #                Action:
