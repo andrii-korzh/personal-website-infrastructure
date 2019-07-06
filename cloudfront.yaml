@@ -43,7 +43,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases:
-#          - !Ref ApexDomainName
+          - !Ref ApexDomainName
           - !Sub 'www.${ApexDomainName}'
         Enabled: true
         Origins:
@@ -54,15 +54,15 @@ Resources:
                 - ''
                 - - origin-access-identity/cloudfront/
                   - !Ref OriginAccessIdentity
-        CustomErrorResponses:
-          - ErrorCachingMinTTL: 300
-            ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCachingMinTTL: 300
-            ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
+#        CustomErrorResponses:
+#          - ErrorCachingMinTTL: 300
+#            ErrorCode: 403
+#            ResponseCode: 200
+#            ResponsePagePath: /index.html
+#          - ErrorCachingMinTTL: 300
+#            ErrorCode: 404
+#            ResponseCode: 200
+#            ResponsePagePath: /index.html
         PriceClass: PriceClass_All
         DefaultCacheBehavior:
           Compress: true

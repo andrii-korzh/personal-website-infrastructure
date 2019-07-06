@@ -4,8 +4,6 @@ Parameters:
   StackTimeout:
     Type: String
     Default: 60
-  DistributionId:
-    Type: String
   DomainName:
     Type: String
   BranchName:
