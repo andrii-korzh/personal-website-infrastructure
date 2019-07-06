@@ -20,6 +20,8 @@ Parameters:
   GitHubOAuthToken:
     Type: String
     NoEcho: true
+  CertificateArn:
+    Type: String
 Resources:
   CloudFront:
     Type: AWS::CloudFormation::Stack
@@ -28,7 +30,8 @@ Resources:
         ApexDomainName: !Ref DomainName
         OriginBucketName: !Ref DomainName
         OriginId: !Ref DomainName
-        CertificateArn: !Ref Certificate
+        CertificateArn: !Ref CertificateArn
+#        CertificateArn: !Ref Certificate
       TemplateURL: ./cloudfront.yaml
       TimeoutInMinutes: !Ref StackTimeout
   CodePipeline:
@@ -51,10 +54,10 @@ Resources:
         DomainName: !Ref DomainName
         CloudFrontUrl: !GetAtt CloudFront.Outputs.DistributionDomainName
       TemplateURL: ./route53.yaml
-  Certificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: !Ref DomainName
-      SubjectAlternativeNames:
-        - !Sub '*.${DomainName}'
-      ValidationMethod: DNS
+#  Certificate:
+#    Type: AWS::CertificateManager::Certificate
+#    Properties:
+#      DomainName: !Ref DomainName
+#      SubjectAlternativeNames:
+#        - !Sub '*.${DomainName}'
+#      ValidationMethod: DNS
