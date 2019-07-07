@@ -26,8 +26,6 @@ Resources:
     Properties:
       Parameters:
         ApexDomainName: !Ref DomainName
-        OriginBucketName: !Ref DomainName
-        OriginId: !Ref DomainName
         CertificateArn: !Ref CertificateArn
 #        CertificateArn: !Ref Certificate
       TemplateURL: ./cloudfront.yaml
@@ -37,7 +35,7 @@ Resources:
     Properties:
       Parameters:
         DistributionId: !GetAtt CloudFront.Outputs.DistributionId
-        DeployBucket: !Ref DomainName
+        DeployBucket: !GetAtt CloudFront.Outputs.BucketName
         BranchName: !Ref BranchName
         RepositoryName: !Ref RepositoryName
         GitHubOwner: !Ref GitHubOwner
@@ -57,5 +55,6 @@ Resources:
 #    Properties:
 #      DomainName: !Ref DomainName
 #      SubjectAlternativeNames:
+#        - !Sub 'www.${DomainName}'
 #        - !Sub '*.${DomainName}'
 #      ValidationMethod: DNS
