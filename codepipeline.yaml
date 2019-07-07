@@ -1,7 +1,7 @@
 Parameters:
   DistributionId:
     Type: String
-  WebsiteBucket:
+  DeployBucket:
     Type: String
   BranchName:
     Type: String
@@ -19,6 +19,7 @@ Parameters:
 Resources:
   CodePipelineArtifactStoreBucket:
     Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Delete
   CodePipelineArtifactStoreBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -96,6 +97,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - 's3:*'
+                  - 'cloudfront:CreateInvalidation'
                 Resource: "*"
   CodeBuildProject:
     Type: 'AWS::CodeBuild::Project'
@@ -123,7 +125,7 @@ Resources:
                 - echo deploy to $ENV_BUCKET
                 - aws s3 sync ./build s3://$ENV_BUCKET --delete
                 - echo invalidate CDN $ENV_DISTRIBUTION_ID
-#                - aws cloudfront create-invalidation --distribution-id $ENV_DISTRIBUTION_ID --paths "/*"
+                - aws cloudfront create-invalidation --distribution-id $ENV_DISTRIBUTION_ID --paths "/*"
 #
 #          artifacts:
 #            files:
@@ -136,7 +138,7 @@ Resources:
         Image: aws/codebuild/standard:2.0
         EnvironmentVariables:
           - Name: ENV_BUCKET
-            Value: !Ref WebsiteBucket
+            Value: !Ref DeployBucket
           - Name: ENV_DISTRIBUTION_ID
             Value: !Ref DistributionId
   CodePipeline:

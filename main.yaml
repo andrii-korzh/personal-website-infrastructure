@@ -3,9 +3,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Parameters:
   StackTimeout:
     Type: String
-    Default: 5
-  DistributionId:
-    Type: String
+    Default: 60
   DomainName:
     Type: String
   BranchName:
@@ -20,23 +18,43 @@ Parameters:
   GitHubOAuthToken:
     Type: String
     NoEcho: true
+  CertificateArn:
+    Type: String
 Resources:
-  Route53Stack:
+  CloudFront:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        DomainName: !Ref DomainName
-      TemplateURL: ./route53.yaml
+        ApexDomainName: !Ref DomainName
+        CertificateArn: !Ref CertificateArn
+#        CertificateArn: !Ref Certificate
+      TemplateURL: ./cloudfront.yaml
       TimeoutInMinutes: !Ref StackTimeout
-  CodePipelineStack:
+  CodePipeline:
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
-        DistributionId: !Ref DistributionId
-        WebsiteBucket: !Ref DomainName
+        DistributionId: !GetAtt CloudFront.Outputs.DistributionId
+        DeployBucket: !GetAtt CloudFront.Outputs.BucketName
         BranchName: !Ref BranchName
         RepositoryName: !Ref RepositoryName
         GitHubOwner: !Ref GitHubOwner
         GitHubSecret: !Ref GitHubSecret
         GitHubOAuthToken: !Ref GitHubOAuthToken
       TemplateURL: ./codepipeline.yaml
+  Route53:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: CloudFront
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+        CloudFrontUrl: !GetAtt CloudFront.Outputs.DistributionDomainName
+      TemplateURL: ./route53.yaml
+#  Certificate:
+#    Type: AWS::CertificateManager::Certificate
+#    Properties:
+#      DomainName: !Ref DomainName
+#      SubjectAlternativeNames:
+#        - !Sub 'www.${DomainName}'
+#        - !Sub '*.${DomainName}'
+#      ValidationMethod: DNS
